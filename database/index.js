@@ -1,13 +1,16 @@
-const mongoose = require('mongoose');
-const github = require('../helpers/github.js')
-mongoose.connect('mongodb://localhost/fetcher', {useNewUrlParser: true});
-
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-  console.log("connection established");
+const mongoose = require("mongoose");
+mongoose.connect("mongodb://localhost/github-fetcher", { useMongoClient: true }, (err, db) => {
+  if (err) throw err;
+  console.log("db successfully connected");
 });
 
+mongoose.connection
+  .once("open", () => {
+    console.log("the connection was made");
+  })
+  .on("error", (error) => {
+    console.log("faild to connect to database");
+  });
 
 let repoSchema = mongoose.Schema({
   id: Number, // Repo ID
@@ -25,64 +28,35 @@ let repoSchema = mongoose.Schema({
   forks_count: Number // Number of forks
 });
 
-let Repo = mongoose.model('Repo', repoSchema);
+let Repo = mongoose.model("Repo", repoSchema);
 
-let save = (username, callback) => {
+let save = (repo) => {
+  return new Promise((resolve, reject) => {
+    var data = new Repo(repo);
+    data.save((err, res) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(res);
+    });
+  });
+};
 
-  Repo.find({"owner.login" : username})
-  .then((result) => {
-    console.log(result)
-    if (result.length === 0) {
-      console.log("username doesn't exist")
-      github.getReposByUsername(username, async (err, res) => {
-        var count = 0;
-        var elems = JSON.parse(res.body);
-        elems.map( (elem, i) => {
-          var repo = new Repo({
-            id: elem.id, // Repo ID
-            name: elem.name, // Repo Name (toyproblems)
-            owner: {
-              login: username, // Username
-              id: elem.owner.id, // User ID
-              avatar_url: elem.owner.avatar_url, // User Avatar link
-              html_url: elem.owner.html_url, // Normal URL to the profile
-              repos_url: elem.owner.repos_url // API URL to repos
-            },
-            html_url: elem.html_url, // Normal URL to the repo
-            description: elem.description, // Repo description
-            url: elem.url, // API URL to the repo
-            forks_count: elem.forks_count // Number of forks
-          })
-          repo.save((err) => {
-            if (err) {
-              console.log("error")
-            } else {
-              console.log("successfully added")
-            }
-          })
-          .then(() => {
-            count++;
-            if (count === elems.length) {
-              Repo.find().sort({"forks_count": -1}).limit(25)
-              .then((finalList) => {
-                console.log("adding")
-                callback(null, finalList)
-              })
-            }
-          })
-        })
-      })
-    } else {
-      console.log("username exists")
-      Repo.find().sort({"forks_count": -1}).limit(25)
-      .then((finalList) => {
-       console.log('final output')
-       callback(null, finalList)
-     })
+let saveAll = (repos) => {
+  return new Promise((resolve, reject) => {
+    Repo.insertMany(repos, (err, res) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(res);
+    });
+  });
+};
 
-    }
-  })
-
-}
+let findRepos = (userName) => {
+  return Repo.find({ "owner.login": userName }).sort({ forks_count: -1 }).limit(25);
+};
 
 module.exports.save = save;
+module.exports.saveAll = saveAll;
+module.exports.findRepos = findRepos;
