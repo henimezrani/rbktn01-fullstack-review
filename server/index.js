@@ -27,37 +27,32 @@ app.post("/repos", function (req, res) {
       // });
     })
     .then((data) => {
-      console.log("we out here");
-      console.log(username);
       return helper.getReposByUsername(username);
     })
     .then((repos) => {
-      console.log(repos);
       if (!repos) {
         throw [];
       }
       return db.saveAll(repos);
     })
     .then((repos) => {
-      console.log(repos);
       res.send(repos);
     })
     .catch((data) => {
-      console.log(data);
       res.send(data);
     });
 });
 
 app.get("/repos", function (req, res) {
-  db.findRepo()
+  db.findAll()
     .then((data) => {
+      console.log(data);
       res.send(data);
     })
     .catch((err) => {
       console.log("err get data ", err);
       res.send([]);
     });
-});
 });
 
 let port = 3030;

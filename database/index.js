@@ -57,6 +57,11 @@ let findRepos = (userName) => {
   return Repo.find({ "owner.login": userName }).sort({ forks_count: -1 }).limit(25);
 };
 
+let findAll = () => {
+  return Repo.find().sort({ forks_count: -1 }).limit(25);
+};
+
 module.exports.save = save;
 module.exports.saveAll = saveAll;
 module.exports.findRepos = findRepos;
+module.exports.findAll = findAll;
